@@ -1,11 +1,13 @@
-﻿namespace EliteMMO.Scripted.Views
+﻿using System;
+using System.ComponentModel;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Windows.Forms;
+using EliteMMO.API;
+
+namespace EliteMMO.Scripted.Views
 {
-    using API;
-    using System;
-    using System.Linq;
-    using System.Text.RegularExpressions;
-    using System.Threading;
-    using System.Windows.Forms;
     public partial class ScriptOnEventTool : UserControl
     {
         public ScriptOnEventTool(EliteAPI core)
@@ -13,12 +15,13 @@
             InitializeComponent();
             api = core;
         }
-        private void BgwScriptEventsDoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
+
+        private void BgwScriptEventsDoWork(object sender, DoWorkEventArgs e)
         {
             while (botRunning || !bgw_script_events.CancellationPending)
             {
                 var onEvent = (from object itemChecked in Events.CheckedItems
-                               select itemChecked.ToString()).ToList();
+                    select itemChecked.ToString()).ToList();
 
                 if (Events.Items.Count == 0 || onEvent.Count == 0)
                     continue;
@@ -53,15 +56,15 @@
                         }
                     }
                 }
+
                 Thread.Sleep(TimeSpan.FromSeconds(0.1));
             }
         }
+
         private void addSettarget_Click(object sender, EventArgs e)
         {
             if (MainWindow.TESTMODE && MainWindow.STATUS.Contains(@":: Final Fantasy Not Found ::"))
-            {
                 eCommand.Text = $"SetTarget;{"test"}";
-            }
             else
                 eCommand.Text = $"SetTarget;{ScriptFarmDNC.TargetInfo.ID}";
         }

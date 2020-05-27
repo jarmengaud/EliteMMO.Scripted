@@ -1,14 +1,15 @@
-﻿namespace EliteMMO.Scripted.Views
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
+using EliteMMO.API;
+using Keys = EliteMMO.API.Keys;
+
+namespace EliteMMO.Scripted.Views
 {
-    using API;
-    using System;
-    using System.Diagnostics;
-    using System.IO;
-    using System.Linq;
-    using System.Net;
-    using System.Runtime.InteropServices;
-    using System.Windows.Forms;
-    using System.Xml;
     public partial class MainWindow : Form
     {
         public static ScriptFarmDNC farmbot;
@@ -16,18 +17,13 @@
         public static ScriptOnEventTool oneventbot;
         public static ScriptSkillup skillupbot;
 
-        [DllImport("kernel32")]
-        static extern bool CreateSymbolicLink(string lpSymlinkFileName, string lpTargetFileName, SymbolicLink dwFlags);
-        enum SymbolicLink
-        {
-            File = 0,
-            Directory = 1,
-        }
         public MainWindow(EliteAPI core)
         {
             InitializeComponent();
             api = core;
+
             #region Final Fantasy XI [POL]
+
             var data = Process.GetProcessesByName("pol");
 
             if (data.Count() != 0)
@@ -35,10 +31,7 @@
                 var proc = Process.GetProcessesByName("pol").First().Id;
                 api = new EliteAPI(proc);
 
-                foreach (var dats in data)
-                {
-                    EliteMMO_PROC?.Items.Add(dats.MainWindowTitle);
-                }
+                foreach (var dats in data) EliteMMO_PROC?.Items.Add(dats.MainWindowTitle);
 
                 if (EliteMMO_PROC != null)
                     EliteMMO_PROC.SelectedIndex = 0;
@@ -49,8 +42,10 @@
             {
                 xStatusLabel.Text = @":: Final Fantasy Not Found ::";
             }
+
             if (TESTMODE)
                 xStatusLabel.Text = xStatusLabel.Text + @"- TEST MODE ENABLED";
+
             #endregion
 
             farmbot = new ScriptFarmDNC(api);
@@ -63,21 +58,18 @@
             skillupbot = new ScriptSkillup(api);
             x5 = skillupbot;
 
-            string apidll = "";
-            string mmodll = "";
+            var apidll = "";
+            var mmodll = "";
             if (File.Exists(Application.StartupPath + @"\EliteAPI.dll"))
-                apidll = (FileVersionInfo.GetVersionInfo(Application.StartupPath + @"\EliteAPI.dll").FileVersion ?? "");
+                apidll = FileVersionInfo.GetVersionInfo(Application.StartupPath + @"\EliteAPI.dll").FileVersion ?? "";
             if (File.Exists(Application.StartupPath + @"\EliteMMO.API.dll"))
-                mmodll = (FileVersionInfo.GetVersionInfo(Application.StartupPath + @"\EliteMMO.API.dll").FileVersion ?? "");
-            string memmo = "";
-            if (apidll == "" || GetStringFromUrl("http://ext.elitemmonetwork.com/downloads/eliteapi/index.php?v") != apidll)
-            {
-                memmo = "\nEliteAPI.dll";
-            }
-            if (mmodll == "" || GetStringFromUrl("http://ext.elitemmonetwork.com/downloads/elitemmo_api/index.php?v") != mmodll)
-            {
-                memmo = "\nEliteMMO.API.dll";
-            }
+                mmodll = FileVersionInfo.GetVersionInfo(Application.StartupPath + @"\EliteMMO.API.dll").FileVersion ??
+                         "";
+            var memmo = "";
+            if (apidll == "" || GetStringFromUrl("http://ext.elitemmonetwork.com/downloads/eliteapi/index.php?v") !=
+                apidll) memmo = "\nEliteAPI.dll";
+            if (mmodll == "" || GetStringFromUrl("http://ext.elitemmonetwork.com/downloads/elitemmo_api/index.php?v") !=
+                mmodll) memmo = "\nEliteMMO.API.dll";
             if (memmo != "")
                 MessageBox.Show("You Need To Update" + memmo + "\nThen Restart Scripted", "!UPDATE NEEDED!");
             var symbolicLink = "";
@@ -85,21 +77,28 @@
                 symbolicLink = dlllocation + @"\Scripts\Addons\ScriptedExtender";
             else if (windowername == "Windower")
                 symbolicLink = dlllocation + @"\addons\ScriptedExtender";
-            if (symbolicLink != "" && !System.IO.Directory.Exists(symbolicLink))
-                CreateSymbolicLink(symbolicLink, Application.StartupPath + @"\ScriptedExtender", SymbolicLink.Directory);
+            if (symbolicLink != "" && !Directory.Exists(symbolicLink))
+                CreateSymbolicLink(symbolicLink, Application.StartupPath + @"\ScriptedExtender",
+                    SymbolicLink.Directory);
             if (TESTMODE)
                 farmbot.enableTestmode();
         }
+
+        [DllImport("kernel32")]
+        private static extern bool CreateSymbolicLink(string lpSymlinkFileName, string lpTargetFileName,
+            SymbolicLink dwFlags);
+
         private string GetStringFromUrl(string location)
         {
-            WebRequest request = WebRequest.Create(location);
-            WebResponse response = request.GetResponse();
-            Stream dataStream = response.GetResponseStream();
-            StreamReader reader = new StreamReader(dataStream);
-            string responseFromServer = reader.ReadToEnd();
+            var request = WebRequest.Create(location);
+            var response = request.GetResponse();
+            var dataStream = response.GetResponseStream();
+            var reader = new StreamReader(dataStream);
+            var responseFromServer = reader.ReadToEnd();
             return responseFromServer;
         }
-        private void RefreshCharactersToolStripMenuItemClick(object sender, System.EventArgs e)
+
+        private void RefreshCharactersToolStripMenuItemClick(object sender, EventArgs e)
         {
             var data = Process.GetProcessesByName("pol");
             var node = EliteMMO_PROC.SelectedIndex;
@@ -110,10 +109,9 @@
             if (count != 0)
             {
                 //EliteMMO_PROC.Items.Clear();
-                foreach (var dats in data.Where(dats => EliteMMO_PROC.Contains(new Control(dats.MainWindowTitle)) == false))
-                {
+                foreach (var dats in data.Where(dats =>
+                    EliteMMO_PROC.Contains(new Control(dats.MainWindowTitle)) == false))
                     EliteMMO_PROC.Items.Add(dats.MainWindowTitle);
-                }
                 EliteMMO_PROC.SelectedIndex = node;
             }
             else
@@ -122,7 +120,8 @@
                     EliteMMO_PROC.Items.Clear();
             }
         }
-        private void EliteMmoProcSelectedIndexChanged(object sender, System.EventArgs e)
+
+        private void EliteMmoProcSelectedIndexChanged(object sender, EventArgs e)
         {
             var data = Process.GetProcessesByName("pol");
 
@@ -130,14 +129,12 @@
 
             foreach (var dats in data.Where(dats => EliteMMO_PROC.Text == dats.MainWindowTitle))
             {
-                bool initialized = api.Reinitialize(dats.Id);
+                var initialized = api.Reinitialize(dats.Id);
                 xStatusLabel.Text = @":: " + api.Entity.GetLocalPlayer().Name + @" ::";
                 if (TESTMODE)
-                    xStatusLabel.Text = xStatusLabel.Text+@"- TEST MODE ENABLED";
+                    xStatusLabel.Text = xStatusLabel.Text + @"- TEST MODE ENABLED";
                 if (initialized)
-                {
-                    for (int i = 0; i < dats.Modules.Count; i++)
-                    {
+                    for (var i = 0; i < dats.Modules.Count; i++)
                         if (dats.Modules[i].FileName.Contains("Ashita.dll"))
                         {
                             windowername = "Ashita";
@@ -148,33 +145,31 @@
                             windowername = "Windower";
                             dlllocation = dats.Modules[i].FileName.Replace(@"\Hook.dll", "");
                         }
-                    }
-                }
             }
         }
-        private void FarmDncToolStripMenuItemClick(object sender, System.EventArgs e)
+
+        private void FarmDncToolStripMenuItemClick(object sender, EventArgs e)
         {
             if (xStatusLabel.Text.Contains(@":: Final Fantasy Not Found ::")) return;
 
 
             if (navbot.isRunning)
-            {   
-                string message = "The NavBot is currently running are\nyou sure you want to swith to the\nFarmBot?\n\nThis will stop your nav from runnind.";
-                string caption = "Switching to NavBot";
-                DialogResult result = MessageBox.Show(message, caption, MessageBoxButtons.YesNo);
+            {
+                var message =
+                    "The NavBot is currently running are\nyou sure you want to swith to the\nFarmBot?\n\nThis will stop your nav from runnind.";
+                var caption = "Switching to NavBot";
+                var result = MessageBox.Show(message, caption, MessageBoxButtons.YesNo);
                 if (result == DialogResult.Yes)
-                {
                     navbot.StopToolStripMenuItem.PerformClick();
-                }
                 else
                     return;
-
             }
 
             //if (InventoryItems.items.Count == 0)
             //    InventoryItems.PopulateItems();
 
             #region show/hide objects
+
             xpic.Hide();
             header1.Hide();
             header2.Hide();
@@ -192,12 +187,14 @@
             x1.Show();
             loadSettingsToolStripMenuItem.Enabled = true;
             saveSettingsToolStripMenuItem.Enabled = true;
+
             #endregion
 
-            TopMostDisplay = "FarmBot"; ;
+            TopMostDisplay = "FarmBot";
+            ;
             farmbot.currentbot = "FarmBot";
             refreshCharactersToolStripMenuItem.Enabled = false;
-            
+
             x1.AutoSize = true;
             x1.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             x1.Dock = DockStyle.Fill;
@@ -217,14 +214,17 @@
                 api.ThirdParty.SendString("//lua load ScriptedExtender");
                 extenderactive = true;
             }
+
             /*api.ThirdParty.SetText("ScriptedHUD", "Scripted:FarmBot");
             api.ThirdParty.FlushCommands();*/
         }
-        private void HealingSupportToolStripMenuItemClick(object sender, System.EventArgs e)
+
+        private void HealingSupportToolStripMenuItemClick(object sender, EventArgs e)
         {
             if (xStatusLabel.Text.Contains(@":: Final Fantasy Not Found ::") && !TESTMODE) return;
 
             #region show/hide objects
+
             xpic.Hide();
             header1.Hide();
             header2.Hide();
@@ -242,6 +242,7 @@
             x2.Show();
             loadSettingsToolStripMenuItem.Enabled = false;
             saveSettingsToolStripMenuItem.Enabled = false;
+
             #endregion
 
             TopMostDisplay = "HealingBot";
@@ -257,36 +258,42 @@
             /*api.ThirdParty.SetText("ScriptedHUD", "Scripted:HealingBot");
             api.ThirdParty.FlushCommands();*/
         }
-        private void AboutToolStripMenuItemClick(object sender, System.EventArgs e)
+
+        private void AboutToolStripMenuItemClick(object sender, EventArgs e)
         {
-            MessageBox.Show("A Farming/Navigaion/On-event bot\nCreated by: Cmalo/vicrelant\nUpdated by: SMD111\nFor use on FFXI\nRequires: Windower or Ashita\n\nPlease read the Manual for more info.","About");
+            MessageBox.Show(
+                "A Farming/Navigaion/On-event bot\nCreated by: Cmalo/vicrelant\nUpdated by: SMD111\nFor use on FFXI\nRequires: Windower or Ashita\n\nPlease read the Manual for more info.",
+                "About");
         }
-        private void CloseExitToolStripMenuItemClick(object sender, System.EventArgs e)
+
+        private void CloseExitToolStripMenuItemClick(object sender, EventArgs e)
         {
             close();
         }
+
         private void MainWindow_FormClosed(object sender, FormClosedEventArgs e)
         {
             close();
         }
-        private void navigationToolStripMenuItem_Click(object sender, System.EventArgs e)
+
+        private void navigationToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (xStatusLabel.Text.Contains(@":: Final Fantasy Not Found ::") && !TESTMODE) return;
 
             if (farmbot.botRunning)
             {
-                string message = "The FarmBot is currently running\nare you sure you want to swith\nto the NavBot?\n\nThis will stop the farmbot.";
-                string caption = "Switching to FarmBot";
-                DialogResult result = MessageBox.Show(message, caption, MessageBoxButtons.YesNo);
+                var message =
+                    "The FarmBot is currently running\nare you sure you want to swith\nto the NavBot?\n\nThis will stop the farmbot.";
+                var caption = "Switching to FarmBot";
+                var result = MessageBox.Show(message, caption, MessageBoxButtons.YesNo);
                 if (result == DialogResult.Yes)
-                {
                     farmbot.stopScriptToolStripMenuItem.PerformClick();
-                }
                 else
                     return;
-
             }
+
             #region show/hide objects
+
             xpic.Hide();
             header1.Hide();
             header2.Hide();
@@ -304,12 +311,13 @@
             x3.Show();
             loadSettingsToolStripMenuItem.Enabled = false;
             saveSettingsToolStripMenuItem.Enabled = false;
+
             #endregion
 
             TopMostDisplay = "NavBot";
             farmbot.currentbot = "NavBot";
             refreshCharactersToolStripMenuItem.Enabled = false;
-            
+
             x3.AutoSize = true;
             x3.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             x3.Dock = DockStyle.Fill;
@@ -321,11 +329,13 @@
             /*api.ThirdParty.SetText("ScriptedHUD", "Scripted:NavBot");
             api.ThirdParty.FlushCommands();*/
         }
+
         private void OnEventToolStripMenuItemClick(object sender, EventArgs e)
         {
             if (xStatusLabel.Text.Contains(@":: Final Fantasy Not Found ::") && !TESTMODE) return;
 
             #region show/hide objects
+
             xpic.Hide();
             header1.Hide();
             header2.Hide();
@@ -343,12 +353,13 @@
             x5.Hide();
             loadSettingsToolStripMenuItem.Enabled = false;
             saveSettingsToolStripMenuItem.Enabled = false;
+
             #endregion
 
             TopMostDisplay = "OnEventBot";
             farmbot.currentbot = "OnEventBot";
             refreshCharactersToolStripMenuItem.Enabled = false;
-            
+
             x4.AutoSize = true;
             x4.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             x4.Dock = DockStyle.Fill;
@@ -358,20 +369,24 @@
             /*api.ThirdParty.SetText("ScriptedHUD", "Scripted:OnEventBot");
             api.ThirdParty.FlushCommands();*/
         }
+
         private void saveSettingsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (TopMostDisplay == "FarmBot")
                 farmbot.SaveFarmSettings();
         }
+
         private void loadSettingsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (TopMostDisplay == "FarmBot")
                 farmbot.LoadFarmSettings();
         }
+
         private void manualToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Process.Start(Application.StartupPath + @"\Scripted Manual.pdf");
         }
+
         private void close()
         {
             if (farmbot.hudshow)
@@ -379,6 +394,7 @@
                 api.ThirdParty.DeleteTextObject("ScriptedHUD");
                 api.ThirdParty.FlushCommands();
             }
+
             if (farmbot.bgw_script_disp.IsBusy)
                 farmbot.bgw_script_disp.CancelAsync();
             if (extenderactive)
@@ -388,13 +404,16 @@
                 else if (windowername == "Windower")
                     api.ThirdParty.SendString("//lua unload ScriptedExtender");
             }
+
             Application.Exit();
         }
+
         private void skillupToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (xStatusLabel.Text == @":: Final Fantasy Not Found ::") return;
 
             #region show/hide objects
+
             xpic.Hide();
             header1.Hide();
             header2.Hide();
@@ -412,6 +431,7 @@
             x5.Show();
             loadSettingsToolStripMenuItem.Enabled = false;
             saveSettingsToolStripMenuItem.Enabled = false;
+
             #endregion
 
             TopMostDisplay = "SkillUp";
@@ -427,21 +447,28 @@
             /*api.ThirdParty.SetText("ScriptedHUD", "Scripted:SkillUpBot");
             api.ThirdParty.FlushCommands();*/
         }
+
         private void releasToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            api.ThirdParty.KeyUp(API.Keys.NUMPAD8);
-            api.ThirdParty.KeyUp(API.Keys.RETURN);
-            api.ThirdParty.KeyUp(API.Keys.NUMPAD2);
-            api.ThirdParty.KeyUp(API.Keys.NUMPADENTER);
-            api.ThirdParty.KeyUp(API.Keys.NUMPAD6);
-            api.ThirdParty.KeyUp(API.Keys.NUMPAD4);
-            api.ThirdParty.KeyUp(API.Keys.RIGHT);
+            api.ThirdParty.KeyUp(Keys.NUMPAD8);
+            api.ThirdParty.KeyUp(Keys.RETURN);
+            api.ThirdParty.KeyUp(Keys.NUMPAD2);
+            api.ThirdParty.KeyUp(Keys.NUMPADENTER);
+            api.ThirdParty.KeyUp(Keys.NUMPAD6);
+            api.ThirdParty.KeyUp(Keys.NUMPAD4);
+            api.ThirdParty.KeyUp(Keys.RIGHT);
             api.AutoFollow.IsAutoFollowing = false;
         }
 
         private void xStatusLabel_Changed(object sender, EventArgs e)
         {
             STATUS = xStatusLabel.Text;
+        }
+
+        private enum SymbolicLink
+        {
+            File = 0,
+            Directory = 1
         }
     }
 }

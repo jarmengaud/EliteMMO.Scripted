@@ -1,15 +1,16 @@
-﻿namespace EliteMMO.Scripted.Views
-{
-    using System;
-    using System.Windows.Forms;
-    using System.Threading;
-    using System.Linq;
-    using API;
-    using Embedded;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Media;
+﻿using System;
+using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using System.Media;
+using System.Threading;
+using System.Windows.Forms;
+using EliteMMO.API;
+using EliteMMO.Scripted.Embedded;
+using Keys = EliteMMO.API.Keys;
 
+namespace EliteMMO.Scripted.Views
+{
     public partial class ScriptFarmDNC : UserControl
     {
         public ScriptFarmDNC(EliteAPI core)
@@ -20,7 +21,7 @@
 
         #region Thread - DNC
 
-        private void BgwScriptDncDoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
+        private void BgwScriptDncDoWork(object sender, DoWorkEventArgs e)
         {
             const double scanInterval = 0.3;
 
@@ -31,13 +32,11 @@
                 //TargetInfo.SetTarget(0);
                 if ((PlayerInfo.Status == 2 || PlayerInfo.Status == 3) &&
                     File.Exists(Application.StartupPath + @"\dead.wav"))
-                {
-                    using (SoundPlayer player = new SoundPlayer(Application.StartupPath + @"\dead.wav"))
+                    using (var player = new SoundPlayer(Application.StartupPath + @"\dead.wav"))
                     {
                         player.PlaySync();
                         player.Dispose();
                     }
-                }
 
                 if (checkZone.Checked && startzone != api.Player.ZoneId) ToolStopClick(null, null);
                 if (DeathWarp.Checked && (PlayerInfo.Status == 2 || PlayerInfo.Status == 3))
@@ -60,14 +59,11 @@
 
                 while (PlayerInfo.Status == 1 && botRunning && TargetInfo.ID > 0)
                 {
-                    if (target.ClaimID != 0)
+                    if (target.ClaimID != 0 && target.ClaimID != PlayerInfo.ServerID)
                     {
                         var partyClaim = false;
-                        foreach (var member in partyMembers)
-                        {
-                            if (target.ClaimID == member.ID)
-                                partyClaim = true;
-                        }
+                        foreach (var member in partyMembers.Where(member => target.ClaimID == member.ID))
+                            partyClaim = true;
 
                         if (partyClaim == false)
                         {
@@ -93,9 +89,7 @@
                         {
                             isMoving = true;
                             while (TargetMoving() && PlayerInfo.Status == 1 && botRunning)
-                            {
                                 Thread.Sleep(TimeSpan.FromSeconds(0.1));
-                            }
 
                             while (TargetInfo.Distance >= (float) KeepTargetRange.Value &&
                                    TargetInfo.HPP > 1 && PlayerInfo.Status == 1 && botRunning)
@@ -111,25 +105,25 @@
                                     break;
                                 if (mobStuckWatch.Checked && isStuck(true))
                                 {
-                                    int count = 0;
+                                    var count = 0;
                                     float dir = -45;
                                     while (isStuck(true))
                                     {
                                         if (TargetInfo.ID == 0 || TargetInfo.ID == PlayerInfo.ServerID)
                                             break;
-                                        api.Entity.GetLocalPlayer().H = PlayerInfo.H + (float) ((Math.PI / 180) * dir);
-                                        WindowInfo.KeyDown(API.Keys.NUMPAD8);
+                                        api.Entity.GetLocalPlayer().H = PlayerInfo.H + (float) (Math.PI / 180 * dir);
+                                        WindowInfo.KeyDown(Keys.NUMPAD8);
                                         Thread.Sleep(TimeSpan.FromSeconds(2));
-                                        WindowInfo.KeyUp(API.Keys.NUMPAD8);
+                                        WindowInfo.KeyUp(Keys.NUMPAD8);
                                         count++;
                                         if (count == 4)
                                         {
-                                            dir = (dir == -45 ? 45 : -45);
+                                            dir = dir == -45 ? 45 : -45;
                                             count = 0;
                                         }
                                     }
 
-                                    WindowInfo.KeyUp(API.Keys.NUMPAD8);
+                                    WindowInfo.KeyUp(Keys.NUMPAD8);
                                 }
                             }
 
@@ -143,18 +137,18 @@
                             while (TargetInfo.Distance < 2 && TargetInfo.HPP > 1 &&
                                    PlayerInfo.Status == 1 && TargetInfo.ID > 0)
                             {
-                                WindowInfo.KeyDown(API.Keys.NUMPAD2);
+                                WindowInfo.KeyDown(Keys.NUMPAD2);
                                 Thread.Sleep(TimeSpan.FromSeconds(0.1));
                             }
 
-                            WindowInfo.KeyUp(API.Keys.NUMPAD2);
+                            WindowInfo.KeyUp(Keys.NUMPAD2);
                         }
                     }
 
                     #endregion
 
-                    WindowInfo.KeyUp(API.Keys.NUMPAD8);
-                    WindowInfo.KeyUp(API.Keys.NUMPAD2);
+                    WindowInfo.KeyUp(Keys.NUMPAD8);
+                    WindowInfo.KeyUp(Keys.NUMPAD2);
 
                     if (!TargetInfo.IsFacingTarget(PlayerInfo.X, PlayerInfo.Z, PlayerInfo.H, TargetInfo.X,
                             TargetInfo.Z) &&
@@ -171,7 +165,6 @@
                         if (selectedHateControl.Text == @"Animated Flourish" &&
                             PlayerInfo.GetFinishingMoves() > 0 &&
                             Recast.GetAbilityRecast(221) == 0)
-                        {
                             if (TargetInfo.HPP >= numericUpDown7.Value &&
                                 TargetInfo.HPP <= numericUpDown6.Value &&
                                 PlayerInfo.Status == 1 && TargetInfo.ID > 0)
@@ -179,11 +172,9 @@
                                 api.ThirdParty.SendString("/ja \"Animated Flourish\" <t>");
                                 Thread.Sleep(TimeSpan.FromSeconds(1.0));
                             }
-                        }
 
                         if (selectedHateControl.Text == @"Provoke" &&
                             Recast.GetAbilityRecast(5) == 0)
-                        {
                             if (TargetInfo.HPP >= numericUpDown7.Value &&
                                 TargetInfo.HPP <= numericUpDown6.Value &&
                                 PlayerInfo.Status == 1 && TargetInfo.ID > 0)
@@ -191,11 +182,9 @@
                                 api.ThirdParty.SendString("/ja \"Provoke\" <t>");
                                 Thread.Sleep(TimeSpan.FromSeconds(1.0));
                             }
-                        }
 
                         if (selectedHateControl.Text == @"Flash" && PlayerInfo.MPP >= 25 &&
                             Recast.GetAbilityRecast(112) == 0)
-                        {
                             if (TargetInfo.HPP >= numericUpDown7.Value &&
                                 TargetInfo.HPP <= numericUpDown6.Value &&
                                 PlayerInfo.Status == 1 && TargetInfo.ID > 0)
@@ -203,7 +192,6 @@
                                 api.ThirdParty.SendString("/ma \"Flash\" <t>");
                                 Casting();
                             }
-                        }
                     }
 
                     #endregion
@@ -265,18 +253,14 @@
                     PlayerMA();
 
                     if (PlayerInfo.GetFinishingMoves() > 0)
-                    {
                         if (userevfloValue.Value > 0 ||
                             usebldfloValue.Value > 0 ||
                             usewldfloValue.Value > 0 ||
                             useclmfloValue.Value > 0 ||
                             usestkfloValue.Value > 0 ||
                             useterfloValue.Value > 0)
-                        {
                             if (TargetInfo.ID > 0)
                                 UseFlourish();
-                        }
-                    }
 
                     Thread.Sleep(TimeSpan.FromSeconds(0.1));
                 }
@@ -288,13 +272,8 @@
 
                 if (PlayerInfo.Status == 0 && PlayerInfo.Status != 0 && TargetInfo.HPP == 0) SetTarget(0);
                 if (ScanDelay.Checked && !naviMove)
-                {
                     Thread.Sleep(TimeSpan.FromSeconds((double) numericUpDown38.Value));
-                }
-                else if (!ScanDelay.Checked)
-                {
-                    Thread.Sleep(TimeSpan.FromSeconds(scanInterval));
-                }
+                else if (!ScanDelay.Checked) Thread.Sleep(TimeSpan.FromSeconds(scanInterval));
 
                 if (IdleLocation.Checked && PlayerInfo.Status == 0 &&
                     (TargetInfo.ID == 0 || TargetInfo.ID == PlayerInfo.TargetID))
@@ -306,22 +285,20 @@
 
                     if (aggro.Checked && PlayerInfo.Status == 0) DetectAggro();
 
-                    if (PlayerInfo.Status == 0 && ((HealHP.Checked && PlayerInfo.HPP <= healHPcount.Value) ||
-                                                   (HealMP.Checked && PlayerInfo.MPP <= healMPcount.Value) ||
-                                                   (healforAutomatonHP.Checked &&
-                                                    PetInfo.HPP <= healforAutomatonHPset.Value) ||
-                                                   (healforAutomatonMP.Checked &&
-                                                    PetInfo.MPP <= healforAutomatonMPset.Value)))
+                    if (PlayerInfo.Status == 0 && (HealHP.Checked && PlayerInfo.HPP <= healHPcount.Value ||
+                                                   HealMP.Checked && PlayerInfo.MPP <= healMPcount.Value ||
+                                                   healforAutomatonHP.Checked &&
+                                                   PetInfo.HPP <= healforAutomatonHPset.Value ||
+                                                   healforAutomatonMP.Checked &&
+                                                   PetInfo.MPP <= healforAutomatonMPset.Value))
                     {
                         Thread.Sleep(TimeSpan.FromSeconds(1.0));
                         if ((PlayerInfo.MainJob == 15 || PlayerInfo.SubJob == 15) && PetInfo.ID > 0)
-                        {
                             if (SMNPetNames.Contains(PetInfo.Name))
                             {
                                 api.ThirdParty.SendString("/pet \"Release\" <me>");
                                 Thread.Sleep(TimeSpan.FromSeconds(1.0));
                             }
-                        }
 
                         api.ThirdParty.SendString("/heal on");
                         Thread.Sleep(TimeSpan.FromSeconds(1.0));
@@ -376,13 +353,17 @@
                                     healdone = true;
                             }
                             else if (PlayerInfo.HPP == 100 && PlayerInfo.MPP == 100)
+                            {
                                 healdone = true;
+                            }
                         }
                         else if ((HealHP.Checked ? PlayerInfo.HPP == 100 : true) &&
                                  (HealMP.Checked ? PlayerInfo.MPP == 100 : true) &&
                                  (healforAutomatonHP.Checked ? PetInfo.HPP == 100 : true) &&
                                  (healforAutomatonMP.Checked ? PetInfo.MPP == 100 : true))
+                        {
                             healdone = true;
+                        }
 
                         if (healdone)
                         {
@@ -402,8 +383,8 @@
                 #endregion
             }
 
-            WindowInfo.KeyUp(API.Keys.NUMPAD8);
-            WindowInfo.KeyUp(API.Keys.NUMPAD2);
+            WindowInfo.KeyUp(Keys.NUMPAD8);
+            WindowInfo.KeyUp(Keys.NUMPAD2);
             api.AutoFollow.IsAutoFollowing = false;
             isMoving = false;
         }
@@ -412,7 +393,7 @@
 
         #region Thread - PET
 
-        private void BgwScriptPetDoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
+        private void BgwScriptPetDoWork(object sender, DoWorkEventArgs e)
         {
             while (botRunning && !bgw_script_pet.CancellationPending)
             {
@@ -513,9 +494,7 @@
                     }
 
                     if (PetInfo.ID > 0 && PetJA.Items.Count > 0 && PetInfo.Status == 1 && TargetInfo.ID > 0)
-                    {
                         PetReadyJA();
-                    }
                 }
 
                 #endregion
@@ -533,9 +512,7 @@
 
                     if (PetInfo.ID > 0 && WyvernJA.Items.Count > 0 &&
                         PlayerInfo.Status == 1 && !string.IsNullOrEmpty(TargetInfo.Name))
-                    {
                         WyvernUseJA();
-                    }
                 }
 
                 #endregion
@@ -559,10 +536,7 @@
 
                 #region pet: PUP
 
-                if (PlayerInfo.MainJob == 18 || PlayerInfo.SubJob == 18)
-                {
-                    PUPUseJA();
-                }
+                if (PlayerInfo.MainJob == 18 || PlayerInfo.SubJob == 18) PUPUseJA();
 
                 #endregion
 
@@ -574,18 +548,16 @@
 
         #region Thread - NAV
 
-        private void BgwScriptNavDoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
+        private void BgwScriptNavDoWork(object sender, DoWorkEventArgs e)
         {
-            int count = 0;
+            var count = 0;
             float dir = -45;
             while (botRunning && !bgw_script_nav.CancellationPending)
             {
                 Thread.Sleep(TimeSpan.FromSeconds(0.1));
                 if (isCasting) continue;
                 if (Linear.Checked)
-                {
                     runReverse.Enabled = false;
-                }
                 else runReverse.Enabled = true;
 
                 if (naviMove && usenav.Checked && selectedNavi.Text != "" && PlayerInfo.Status == 0 &&
@@ -605,7 +577,7 @@
                             }
                             else
                             {
-                                closestWayPoint = (navPathX.Count() - 1);
+                                closestWayPoint = navPathX.Count() - 1;
                             }
                         }
                     }
@@ -631,15 +603,17 @@
                         if (api.Player.ViewMode != 1)
                             api.Player.ViewMode = 1;
                         api.AutoFollow.IsAutoFollowing = false;
-                        api.Entity.GetLocalPlayer().H = (float) ((Math.PI / 180) *
+                        api.Entity.GetLocalPlayer().H = (float) (Math.PI / 180 *
                                                                  (PlayerInfo.GetAngleFrom(navPathX[closestWayPoint],
                                                                      navPathZ[closestWayPoint]) - 180));
                     }
                     else if (api.Player.ViewMode == 1)
+                    {
                         api.Player.ViewMode = 0;
+                    }
 
                     api.AutoFollow.SetAutoFollowCoords((float) navPathX[closestWayPoint] - PlayerInfo.X,
-                        ((navPathY[closestWayPoint] == 0) ? 0 : (float) navPathY[closestWayPoint] - PlayerInfo.Y),
+                        navPathY[closestWayPoint] == 0 ? 0 : (float) navPathY[closestWayPoint] - PlayerInfo.Y,
                         (float) navPathZ[closestWayPoint] - PlayerInfo.Z);
 
                     if (navPathpause[closestWayPoint].Contains("Pause"))
@@ -667,9 +641,7 @@
                     //}
 
                     if (navPathdoor[closestWayPoint].Contains("Door"))
-                    {
                         CheckDoor(closestWayPoint);
-                    }
                     //if (navPathdoor[closestWayPoint] > 0)
                     //{
                     //    CheckDoor(closestWayPoint);
@@ -688,19 +660,19 @@
                     api.AutoFollow.IsAutoFollowing && isStuck())
                 {
                     api.AutoFollow.IsAutoFollowing = false;
-                    api.Entity.GetLocalPlayer().H = PlayerInfo.H + (float) ((Math.PI / 180) * dir);
-                    WindowInfo.KeyDown(API.Keys.NUMPAD8);
+                    api.Entity.GetLocalPlayer().H = PlayerInfo.H + (float) (Math.PI / 180 * dir);
+                    WindowInfo.KeyDown(Keys.NUMPAD8);
                     Thread.Sleep(TimeSpan.FromSeconds(2));
-                    WindowInfo.KeyUp(API.Keys.NUMPAD8);
+                    WindowInfo.KeyUp(Keys.NUMPAD8);
                     count++;
                     if (count == 4)
                     {
-                        dir = (dir == -45 ? 45 : -45);
+                        dir = dir == -45 ? 45 : -45;
                         count = 0;
                     }
                 }
 
-                WindowInfo.KeyUp(API.Keys.NUMPAD8);
+                WindowInfo.KeyUp(Keys.NUMPAD8);
             }
         }
 
@@ -708,22 +680,21 @@
 
         #region Thread - SCH Charges
 
-        private void BgwScriptSCHChargesDoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
+        private void BgwScriptSCHChargesDoWork(object sender, DoWorkEventArgs e)
         {
-            DateTime last = DateTime.Now;
+            var last = DateTime.Now;
             while (botRunning && !bgw_script_sch.CancellationPending)
             {
                 if (PlayerInfo.MainJob == 20 || PlayerInfo.SubJob == 20)
-                {
-                    foreach (KeyValuePair<int, dynamic> kvp in SCHcharges)
+                    foreach (var kvp in SCHcharges)
                     {
-                        int lvl = 1;
+                        var lvl = 1;
                         if (PlayerInfo.MainJob == 20) lvl = PlayerInfo.MainJobLevel;
                         else if (PlayerInfo.SubJob == 20) lvl = PlayerInfo.SubJobLevel;
-                        int time = (kvp.Key == 99 && lvl == 99 && PlayerInfo.UsedJobPoints >= 550
+                        int time = kvp.Key == 99 && lvl == 99 && PlayerInfo.UsedJobPoints >= 550
                             ? 33
-                            : kvp.Value.time);
-                        DateTime now = DateTime.Now;
+                            : kvp.Value.time;
+                        var now = DateTime.Now;
                         if (lvl >= kvp.Key && Math.Abs(now.Subtract(last).TotalSeconds) >= time)
                         {
                             if (SchCharges < kvp.Value.charges)
@@ -732,7 +703,6 @@
                             break;
                         }
                     }
-                }
 
                 Thread.Sleep(TimeSpan.FromSeconds(0.1));
             }
@@ -742,7 +712,7 @@
 
         #region Thread - Display Update
 
-        private void BgwScriptDisplayDoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
+        private void BgwScriptDisplayDoWork(object sender, DoWorkEventArgs e)
         {
             var lastCommand = 0;
             while (!bgw_script_disp.CancellationPending)
@@ -754,18 +724,15 @@
                               "/" + LastFunction + (isCasting ? "/Casting" : "");
                     var msg = $"Scripted:{currentbot}|";
                     if (currentbot == "FarmBot")
-                    {
                         msg = msg + $"Targeting: {targeting}|Running: {(botRunning ? "YES" : "NO")}";
-                    }
                     else if (currentbot == "NavBot")
                         msg = msg +
-                              $"{(ScriptNaviMap.isPlaying ? "Runing Nav" : (ScriptNaviMap.isRecording ? "Recording Nav" : "Stopped"))}";
+                              $"{(ScriptNaviMap.isPlaying ? "Runing Nav" : ScriptNaviMap.isRecording ? "Recording Nav" : "Stopped")}";
                     else if (currentbot == "OnEventBot")
                         msg = msg + $"Running: {(ScriptOnEventTool.botRunning ? "YES" : "NO")}";
 
                     if (showHUD.CheckState == CheckState.Indeterminate)
-                    {
-                        msg = String.Format(hudtext.Text, currentbot, targeting, JobNames[PlayerInfo.SubJob].Long,
+                        msg = string.Format(hudtext.Text, currentbot, targeting, JobNames[PlayerInfo.SubJob].Long,
                             PlayerInfo.MainJobLevel, JobNames[PlayerInfo.SubJob].Long, PlayerInfo.SubJobLevel,
                             Statuses[PlayerInfo.Status], PlayerInfo.HP,
                             PlayerInfo.MaxHP, PlayerInfo.HPP, PlayerInfo.MP, PlayerInfo.MaxMP, PlayerInfo.MPP,
@@ -774,14 +741,13 @@
                             PetInfo.MPP,
                             PetInfo.TPP, Statuses[PetInfo.Status], PartyInfo.Count(), PartyInfo.averageHPP(),
                             TargetInfo.Name, TargetInfo.ID.ToString("X"),
-                            TargetInfo.HPP, TargetInfo.Distance, (TargetInfo.LockedOn ? "YES" : "NO"),
-                            (botRunning ? "YES" : "NO"),
+                            TargetInfo.HPP, TargetInfo.Distance, TargetInfo.LockedOn ? "YES" : "NO",
+                            botRunning ? "YES" : "NO",
                             api.VanaTime.CurrentHour, api.VanaTime.CurrentMinute.ToString("00"),
                             ScriptOnEventTool.triggeredline, CFD,
-                            (IndiDic["Active"]
+                            IndiDic["Active"]
                                 ? $"Element ID {IndiDic["Element"]}:Target {(IndiDic["Enemy"] ? "Enemy" : "Party")}"
-                                : "Not Active"));
-                    }
+                                : "Not Active");
 
                     api.ThirdParty.SetText("ScriptedHUD", msg);
                     api.ThirdParty.SetLocation("ScriptedHUD", (float) hudX.Value, (float) hudY.Value);
@@ -811,7 +777,9 @@
                     commandInterface();
                 }
                 else
+                {
                     lastCommand = cmdTime;
+                }
             }
         }
 
@@ -819,7 +787,7 @@
 
         #region Thread - Chat Watch
 
-        private void BgwScriptchatWatchDoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
+        private void BgwScriptchatWatchDoWork(object sender, DoWorkEventArgs e)
         {
             while (botRunning && !bgw_script_chat.CancellationPending)
             {
@@ -836,7 +804,9 @@
                     }
                 }
                 else if (MonStagered)
+                {
                     MonStagered = false;
+                }
             }
 
             if (MonStagered)

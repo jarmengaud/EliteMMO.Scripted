@@ -1,7 +1,7 @@
-﻿namespace EliteMMO.Scripted.Embedded
+﻿using System.Collections.Generic;
+
+namespace EliteMMO.Scripted.Embedded
 {
-    using System.Collections.Generic;
-    using API;
     public class InventoryItems
     {
         //private static EliteAPI api;

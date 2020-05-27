@@ -1,18 +1,24 @@
-﻿namespace FormSerialisation
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Windows.Forms;
+using System.Xml;
+using EliteMMO.Scripted.Views;
+
+namespace FormSerialisation
 {
-    using EliteMMO.Scripted.Views;
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Windows.Forms;
-    using System.Xml;
     public static class FormSerialisor
     {
-        public static List<string> childCtrlskip = new List<string>(new string[] {"WaltzPTadd","PartyWaltsList","CurePTlist",
-            "shutdowngroup"});
+        public static List<string> childCtrlskip = new List<string>(new[]
+        {
+            "WaltzPTadd", "PartyWaltsList", "CurePTlist",
+            "shutdowngroup"
+        });
+
         public static void Serialise(Control c, string XmlFileName)
         {
-            XmlTextWriter xmlSerialisedForm = new XmlTextWriter(XmlFileName, System.Text.Encoding.Default);
+            var xmlSerialisedForm = new XmlTextWriter(XmlFileName, Encoding.Default);
             xmlSerialisedForm.Formatting = Formatting.Indented;
             xmlSerialisedForm.WriteStartDocument();
             xmlSerialisedForm.WriteStartElement("ChildForm");
@@ -28,106 +34,108 @@
             xmlSerialisedForm.WriteEndDocument();
             xmlSerialisedForm.Flush();
             xmlSerialisedForm.Close();
-            
         }
+
         private static void AddChildControls(XmlTextWriter xmlSerialisedForm, Control c)
         {
             foreach (Control childCtrl in c.Controls)
-            {
                 if (!(childCtrl is Label) && !(childCtrl is ListView) && !(childCtrl is MenuStrip) &&
-                      childCtrl.GetType().ToString() != "System.Windows.Forms.UpDownBase+UpDownEdit" &&
-                      childCtrl.GetType().ToString() != "System.Windows.Forms.UpDownBase+UpDownButtons" &&
-                      childCtrl.GetType().ToString() != "System.Windows.Forms.Button" && !childCtrlskip.Contains(childCtrl.Name))
+                    childCtrl.GetType().ToString() != "System.Windows.Forms.UpDownBase+UpDownEdit" &&
+                    childCtrl.GetType().ToString() != "System.Windows.Forms.UpDownBase+UpDownButtons" &&
+                    childCtrl.GetType().ToString() != "System.Windows.Forms.Button" &&
+                    !childCtrlskip.Contains(childCtrl.Name))
                 {
                     xmlSerialisedForm.WriteStartElement("Control");
                     xmlSerialisedForm.WriteAttributeString("Type", childCtrl.GetType().ToString());
                     xmlSerialisedForm.WriteAttributeString("Name", childCtrl.Name);
                     if (childCtrl is TextBox)
                     {
-                        xmlSerialisedForm.WriteElementString("Text", ((TextBox)childCtrl).Text);
+                        xmlSerialisedForm.WriteElementString("Text", ((TextBox) childCtrl).Text);
                     }
                     else if (childCtrl is RadioButton)
                     {
-                        xmlSerialisedForm.WriteElementString("Checked", ((RadioButton)childCtrl).Checked.ToString());
+                        xmlSerialisedForm.WriteElementString("Checked", ((RadioButton) childCtrl).Checked.ToString());
                     }
                     else if (childCtrl is NumericUpDown)
                     {
-                        xmlSerialisedForm.WriteElementString("Value", ((NumericUpDown)childCtrl).Value.ToString());
-                        xmlSerialisedForm.WriteElementString("Enabled", ((NumericUpDown)childCtrl).Enabled.ToString());
+                        xmlSerialisedForm.WriteElementString("Value", ((NumericUpDown) childCtrl).Value.ToString());
+                        xmlSerialisedForm.WriteElementString("Enabled", ((NumericUpDown) childCtrl).Enabled.ToString());
                     }
                     else if (childCtrl is GroupBox)
                     {
-                        xmlSerialisedForm.WriteElementString("Enabled", ((GroupBox)childCtrl).Enabled.ToString());
+                        xmlSerialisedForm.WriteElementString("Enabled", ((GroupBox) childCtrl).Enabled.ToString());
                     }
                     else if (childCtrl is CheckedListBox)
                     {
-                        CheckedListBox lst = (CheckedListBox)childCtrl;
+                        var lst = (CheckedListBox) childCtrl;
                         var count = 0;
                         foreach (string i in lst.CheckedItems)
                         {
                             xmlSerialisedForm.WriteElementString("SelectedItem" + count, i);
                             count++;
                         }
-                        xmlSerialisedForm.WriteElementString("SelectedIndexcount", (lst.CheckedIndices.Count.ToString()));
+
+                        xmlSerialisedForm.WriteElementString("SelectedIndexcount", lst.CheckedIndices.Count.ToString());
                     }
                     else if (childCtrl is ComboBox)
                     {
-                        xmlSerialisedForm.WriteElementString("Text", ((ComboBox)childCtrl).Text);
+                        xmlSerialisedForm.WriteElementString("Text", ((ComboBox) childCtrl).Text);
                     }
                     else if (childCtrl is CheckBox)
                     {
-                        xmlSerialisedForm.WriteElementString("Checked", ((CheckBox)childCtrl).Checked.ToString());
-                        xmlSerialisedForm.WriteElementString("Enabled", ((CheckBox)childCtrl).Enabled.ToString());
-                        xmlSerialisedForm.WriteElementString("CheckState", ((CheckBox)childCtrl).CheckState.ToString());
+                        xmlSerialisedForm.WriteElementString("Checked", ((CheckBox) childCtrl).Checked.ToString());
+                        xmlSerialisedForm.WriteElementString("Enabled", ((CheckBox) childCtrl).Enabled.ToString());
+                        xmlSerialisedForm.WriteElementString("CheckState",
+                            ((CheckBox) childCtrl).CheckState.ToString());
                     }
+
                     if (childCtrl.HasChildren)
                     {
                         if (childCtrl is SplitContainer)
                         {
-                            AddChildControls(xmlSerialisedForm, ((SplitContainer)childCtrl).Panel1);
-                            AddChildControls(xmlSerialisedForm, ((SplitContainer)childCtrl).Panel2);
+                            AddChildControls(xmlSerialisedForm, ((SplitContainer) childCtrl).Panel1);
+                            AddChildControls(xmlSerialisedForm, ((SplitContainer) childCtrl).Panel2);
                         }
                         else
                         {
                             AddChildControls(xmlSerialisedForm, childCtrl);
                         }
                     }
+
                     xmlSerialisedForm.WriteEndElement();
                 }
-            }
         }
+
         public static void Deserialise(Control c, string XmlFileName)
         {
             if (File.Exists(XmlFileName))
             {
-                XmlDocument xmlSerialisedForm = new XmlDocument();
+                var xmlSerialisedForm = new XmlDocument();
                 xmlSerialisedForm.Load(XmlFileName);
-                XmlNode topLevel = xmlSerialisedForm.ChildNodes[1];
-                foreach (XmlNode n in topLevel.ChildNodes)
-                {
-                    SetControlProperties((Control)c, n);
-                }
-                XmlNode secondLevel = xmlSerialisedForm.ChildNodes[2];
+                var topLevel = xmlSerialisedForm.ChildNodes[1];
+                foreach (XmlNode n in topLevel.ChildNodes) SetControlProperties(c, n);
+                var secondLevel = xmlSerialisedForm.ChildNodes[2];
             }
         }
+
         private static void SetControlProperties(Control currentCtrl, XmlNode n)
         {
-            string controlName = n.Attributes["Name"].Value;
+            var controlName = n.Attributes["Name"].Value;
             if (controlName == "Extra")
             {
                 ScriptFarmDNC.idleX = float.Parse(n["idleX"].InnerText);
                 ScriptFarmDNC.idleY = float.Parse(n["idleY"].InnerText);
                 ScriptFarmDNC.idleZ = float.Parse(n["idleZ"].InnerText);
             }
+
             if (controlName == "") return;
-            string controlType = n.Attributes["Type"].Value;
+            var controlType = n.Attributes["Type"].Value;
             if (controlType == "") return;
-            Control[] ctrl = currentCtrl.Controls.Find(controlName, true);
+            var ctrl = currentCtrl.Controls.Find(controlName, true);
             if (ctrl.Length > 0)
             {
-                Control ctrlToSet = GetImmediateChildControl(ctrl, currentCtrl);
+                var ctrlToSet = GetImmediateChildControl(ctrl, currentCtrl);
                 if (ctrlToSet != null)
-                {
                     if (ctrlToSet.GetType().ToString() == controlType)
                     {
                         switch (controlType)
@@ -135,15 +143,12 @@
                             case "Extra":
                                 break;
                             case "System.Windows.Forms.CheckedListBox":
-                                CheckedListBox ltr = (CheckedListBox)ctrlToSet;
-                                var Icount=Convert.ToInt32(n["SelectedIndexcount"].InnerText);
-                                foreach (int i in ltr.CheckedIndices)
+                                var ltr = (CheckedListBox) ctrlToSet;
+                                var Icount = Convert.ToInt32(n["SelectedIndexcount"].InnerText);
+                                foreach (int i in ltr.CheckedIndices) ltr.SetItemCheckState(i, CheckState.Unchecked);
+                                for (var i = 0; i < Icount; i++)
                                 {
-                                    ltr.SetItemCheckState(i, CheckState.Unchecked);
-                                }
-                                for (int i = 0; i < (Icount); i++)
-                                {
-                                    var sitem = n["SelectedItem" + i.ToString()].InnerText;
+                                    var sitem = n["SelectedItem" + i].InnerText;
                                     if (sitem != null && ltr.Items.Contains(sitem))
                                     {
                                         var index = ltr.Items.IndexOf(sitem);
@@ -151,58 +156,56 @@
                                         ltr.SetSelected(index, true);
                                     }
                                 }
+
                                 break;
                             case "System.Windows.Forms.RadioButton":
-                                ((RadioButton)ctrlToSet).Checked = Convert.ToBoolean(n["Checked"].InnerText);
+                                ((RadioButton) ctrlToSet).Checked = Convert.ToBoolean(n["Checked"].InnerText);
                                 break;
                             case "System.Windows.Forms.GroupBox":
-                                ((GroupBox)ctrlToSet).Enabled = Convert.ToBoolean(n["Enabled"].InnerText);
+                                ((GroupBox) ctrlToSet).Enabled = Convert.ToBoolean(n["Enabled"].InnerText);
                                 break;
                             case "System.Windows.Forms.NumericUpDown":
-                                ((NumericUpDown)ctrlToSet).Value = Convert.ToDecimal(n["Value"].InnerText);
-                                ((NumericUpDown)ctrlToSet).Enabled = Convert.ToBoolean(n["Enabled"].InnerText);
+                                ((NumericUpDown) ctrlToSet).Value = Convert.ToDecimal(n["Value"].InnerText);
+                                ((NumericUpDown) ctrlToSet).Enabled = Convert.ToBoolean(n["Enabled"].InnerText);
                                 break;
                             case "System.Windows.Forms.TextBox":
-                                ((TextBox)ctrlToSet).Text = n["Text"].InnerText;
+                                ((TextBox) ctrlToSet).Text = n["Text"].InnerText;
                                 break;
                             case "System.Windows.Forms.ComboBox":
-                                if (((ComboBox)ctrlToSet).Text == "Not Selected")
-                                {
-                                    ((ComboBox)ctrlToSet).Text = n["Text"].InnerText;
-                                }
+                                if (((ComboBox) ctrlToSet).Text == "Not Selected")
+                                    ((ComboBox) ctrlToSet).Text = n["Text"].InnerText;
                                 else
-                                    ((ComboBox)ctrlToSet).Text = "";
+                                    ((ComboBox) ctrlToSet).Text = "";
 
-                                ((ComboBox)ctrlToSet).SelectedText = n["Text"].InnerText;
+                                ((ComboBox) ctrlToSet).SelectedText = n["Text"].InnerText;
                                 break;
                             case "System.Windows.Forms.CheckBox":
-                                ((CheckBox)ctrlToSet).Checked = Convert.ToBoolean(n["Checked"].InnerText);
-                                ((CheckBox)ctrlToSet).CheckState = (CheckState)Enum.Parse(typeof(CheckState), n["CheckState"].InnerText);
+                                ((CheckBox) ctrlToSet).Checked = Convert.ToBoolean(n["Checked"].InnerText);
+                                ((CheckBox) ctrlToSet).CheckState =
+                                    (CheckState) Enum.Parse(typeof(CheckState), n["CheckState"].InnerText);
                                 break;
                         }
+
                         if (n.HasChildNodes && ctrlToSet.HasChildren)
                         {
-                            XmlNodeList xnlControls = n.SelectNodes("Control");
-                            foreach (XmlNode n2 in xnlControls)
-                            {
-                                SetControlProperties(ctrlToSet, n2);
-                            }
+                            var xnlControls = n.SelectNodes("Control");
+                            foreach (XmlNode n2 in xnlControls) SetControlProperties(ctrlToSet, n2);
                         }
                     }
-                }
             }
         }
+
         private static Control GetImmediateChildControl(Control[] ctrl, Control currentCtrl)
         {
             Control c = null;
-            for (int i = 0; i < ctrl.Length; i++)
-            {
-                if ((ctrl[i].Parent.Name == currentCtrl.Name) || (currentCtrl is SplitContainer && ctrl[i].Parent.Parent.Name == currentCtrl.Name))
+            for (var i = 0; i < ctrl.Length; i++)
+                if (ctrl[i].Parent.Name == currentCtrl.Name ||
+                    currentCtrl is SplitContainer && ctrl[i].Parent.Parent.Name == currentCtrl.Name)
                 {
                     c = ctrl[i];
                     break;
                 }
-            }
+
             return c;
         }
     }
